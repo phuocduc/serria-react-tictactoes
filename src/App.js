@@ -1,19 +1,70 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+// import ReactDom from 'react-doms'
+import FacebookLogin from "react-facebook-login";
 import "./App.css";
 
 function App() {
   const [board, setBoard] = useState(new Array(9).fill(null));
   const [isOver, setIsOver] = useState(false);
   const [winner, setWinner] = useState(null);
-  console.log("from", isOver);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [topScore, setTopScore] = useState(null);
 
-  const resetGame=()=>{
-    setBoard(new Array(9).fill(null))
-    setIsOver(false)
-    setWinner(null)
-  }
+  const resetGame = () => {
+    setBoard(new Array(9).fill(null));
+    setIsOver(false);
+    setWinner(null);
+  };
+  const getData = async () => {
+    const response = await fetch(
+      `https://ftw-highscores.herokuapp.com/tictactoe-dev`
+    );
+    const data = await response.json();
+
+    setTopScore(data.items);
+  };
+
+  const postData = async () => {
+    let data = new URLSearchParams();
+    data.append("player", "Hello World");
+    data.append("score", -Infinity);
+    const url = `https://ftw-highscores.herokuapp.com/tictactoe-dev`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: data.toString(),
+      json:true
+    });
+    const resp = await response.json()
+    console.log('resp',resp)
+
+    getData()
+  };
+
+  useEffect(() => {
+    getData();
+  }, []);
+
+  const responseFacebook = resp => {
+    // console.log("hehe", resp);
+    setCurrentUser({ name: resp.name, email: resp.email });
+  };
+
   return (
     <div className="App">
+      {!currentUser ? (
+        <FacebookLogin
+          autoLoad={true}
+          appId="901794383532960"
+          fields="name,email,picture"
+          callback={resp => responseFacebook(resp)}
+        />
+      ) : (
+        <div></div>
+      )}
+
       <Board
         key={board}
         setWinner={setWinner}
@@ -33,10 +84,25 @@ function App() {
             )}
           </span>
         ) : (
-          <span>Next player is {board.filter(el => !el).length % 2 ? "X" : "O"}</span>
+          <span>
+            Next player is {board.filter(el => !el).length % 2 ? "X" : "O"}
+          </span>
         )}
       </div>
-      <button onClick={()=>resetGame()}>Reset Game</button>
+      <button onClick={() => resetGame()}>Reset Game</button>
+
+      <h1>History</h1>
+      <div>
+        {topScore &&
+          topScore.map(el => {
+            return (
+              <div>
+                name: {el.player} Score: {el.score}
+              </div>
+            );
+          })}
+      </div>
+      <button onClick={()=>postData()}>Up up</button>
     </div>
   );
 }
@@ -57,9 +123,9 @@ function Board(props) {
     props.setBoard(board);
     console.log(decideOutCome(board));
 
-    if(decideOutCome(board)){
-      props.setWinner(decideOutCome(board))
-      props.setIsOver(true)
+    if (decideOutCome(board)) {
+      props.setWinner(decideOutCome(board));
+      props.setIsOver(true);
     }
   };
 
